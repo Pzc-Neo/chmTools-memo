@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quill编辑器</title>
+    <link rel="stylesheet" href="./css/lib/normalize.css">
+    <link rel="stylesheet" href="./index.css">
+
+</head>
+
+<body>
+    <div id="app" v-cloak class="chmST_container_col chmST_main chmCL_main" @click="hide_contextmenu()">
+        <div class="chmST_top_bar">
+            <!-- <div class="section center">菜单</div> -->
+            <div class="section left">
+                <span v-if="editor_is_change">*</span>
+                {{app_name}}</div>
+            <div class="section right system_btn">
+                <div style="display: inline-block;">
+                    <div v-if="win_always_on_top" class="can_mark"
+                        @click="app_command('win_always_on_top','[取消置顶] 窗口')">
+                        <img src="./image/other_icon/always_on_top_true.svg">
+                    </div>
+                    <div v-else="win_always_on_top" class="can_mark"
+                        @click="app_command('win_always_on_top','[置顶] 窗口')">
+                        <img src="./image/other_icon/always_on_top_false.svg">
+                    </div>
+                </div>
+                <div style="display: inline-block;" class="can_mark"
+                    @click="is_show_setting_panel=!is_show_setting_panel">
+                    <img src="./image/other_icon/setting.svg">
+                </div>
+                <div style="display: inline-block;" class="can_mark" @click="app_command('win_minimize')">
+                    <img src="./image/other_icon/minimize.svg">
+                </div>
+                <div style="display: inline-block;" class="can_mark" @click="app_command('win_maximize')">
+                    <img src="./image/other_icon/maximize.svg">
+                </div>
+                <div style="display: inline-block;" class="can_mark win_close" @click="app_command('win_close')">
+                    <img class="quick" src="./image/other_icon/quick.svg">
+                </div>
+            </div>
+        </div>
+        <div class="chmST_bottom_bar chmCL_bottom_bar">
+            <div v-if="is_show_setting_panel" class="setting_panel chmCL_main">
+                <div style="margin-bottom: 9px;">
+                    <span>
+                        <span>自动保存</span>
+                        <input type="checkbox">
+                        <span>间隔</span>
+                        <input type="text">
+                    </span>
+                </div>
+                <div style="position: absolute;width: 100%; bottom: 15px; text-align: center;">
+                    <button class="chmST_btn chmCL_btn start_btn" @click="is_show_setting_panel=false">
+                        关闭
+                    </button>
+                </div>
+            </div>
+
+            <div v-show="is_show_side_bar" class="left">
+                <!-- <div style="position: absolute;right: 0px; width: 5px;height: 100%; background: #ccc;cursor: e-resize;"
+                    @mousedown="handle_drap_resize($event)" >
+                </div> -->
+                <div class="panel_switcher">
+                    <!-- <div @click="new_data()"
+                        style="width: 100%; text-align: center; position: relative; top: 50%; transform: translateY(-50%);user-select: none;cursor: default;">
+                        新建</div> -->
+                    <button :class="{selected:is_show_folder_panel}" @click="is_show_folder_panel=true">文件</button>
+                    <button :class="{selected:!is_show_folder_panel}" @click="is_show_folder_panel=false">列表</button>
+                </div>
+                <div v-show="is_show_folder_panel"
+                    style=" display: flex;overflow: hidden; flex-direction: column; flex: 1; ">
+                    <div class="list_item" :class={selected:current_file.path==default_file.path}
+                        @click="open_file(default_file)" @contextmenu="show_contextmenu($event,index)"
+                        style="border-bottom: 1px solid var(--main_border_color);" :title="default_file.name">
+                        {{default_file.name}}
+                    </div>
+                    <div class="data_list">
+                        <div v-for="(file,index) in files" class="list_item"
+                            :class={selected:current_file.path==file.path} @click="open_file(file)"
+                            @contextmenu="show_contextmenu($event,index)" :title="file.name">
+                            {{file.name}}
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; height:25px; text-align: center; position: relative; border-top: 1px solid var(--main_border_color);">
+                        <button style="border: 0px;" @click="new_file()">新建</button>
+                        <input style="border: 0px; flex: 1;min-width: 20px;">
+                    </div>
+                </div>
+                <div v-show="!is_show_folder_panel"
+                    style=" display: flex;overflow: hidden; flex-direction: column; flex: 1; ">
+                    <div class="data_list">
+                        <div v-for="(data,index) in datas" class="list_item" :class={selected:current_data.id==data.id}
+                            draggable="true" @dragstart="handle_drap($event)" @drop="handle_drop(event)"
+                            @dragover="handle_drap_over($event)" drap_type="file" drop_type="file" :index="index"
+                            @click="open_data(data)" @contextmenu="show_contextmenu($event,index)"
+                            :title="data.name+'\n创建日期：'+data.created_date+'\n更新日期：'+data.updated_date">
+                            <span v-if="current_data.id == data.id && editor_is_change" drap_type="file"
+                                drop_type="file" :index="index">*</span>
+                            <span @dblclick="rename($event,index)" drap_type="file" drop_type="file" :index="index">
+                                {{data.name}}
+                            </span>
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; height:28px; text-align: center; position: relative; border-top: 1px solid var(--main_border_color);">
+                        <button style="border: 0px;" @click="new_data()">新建</button>
+                        <input style="border: 0px; flex: 1;min-width: 20px;">
+                    </div>
+                </div>
+
+            </div>
+            <div class="right">
+                <div id="editor_toolbar">
+                    <button class=""
+                        @click="is_show_more_tool=!is_show_more_tool">{{is_show_more_tool?"<":">"}}</button>
+                    <button class="ql-header" value='1'></button>
+                    <button class="ql-header" value='2'></button>
+
+                    <button class="ql-bold"></button>
+                    <button class="ql-italic"></button>
+                    <button class="ql-underline"></button>
+
+                    <button class="ql-list" value="ordered"></button>
+                    <button class="ql-list" value="bullet"></button>
+
+                    <select class="ql-color"></select>
+                    <select class="ql-background"></select>
+
+                    <select class="ql-align">
+                        <option value=""></option>
+                        <option value="center"></option>
+                        <option value="right"></option>
+                        <option value="justify"></option>
+                    </select>
+
+                    <button class="ql-blockquote"></button>
+                    <button class="ql-clean"></button>
+
+                    <div v-show="is_show_more_tool">
+
+                        <select class="ql-font">
+                            <option value="Microsoft-YaHei" selected></option>
+                            <option value="SimSun"></option>
+                            <option value="SimHei"></option>
+                            <option value="KaiTi"></option>
+                            <option value="FangSong"></option>
+                            <option value="Arial"></option>
+                            <option value="Times-New-Roman"></option>
+                            <option value="sans-serif"></option>
+                        </select>
+
+                        <button class="ql-indent" value="+1"></button>
+                        <button class="ql-indent" value="-1"></button>
+
+                        <button class="ql-strike"></button>
+
+                        <!-- Add font size dropdown -->
+                        <select class="ql-size">
+                            <option value="small"></option>
+                            <!-- Note a missing, thus falsy value, is used to reset to default -->
+                            <option selected></option>
+                            <option value="large"></option>
+                            <option value="huge"></option>
+                        </select>
+
+                        <button class="ql-image"></button>
+                        <button class="ql-video"></button>
+                        <button class="ql-code-block"></button>
+                        <button class="ql-formula"></button>
+
+                        <button class="ql-script" value="sub"></button>
+                        <button class="ql-script" value="super"></button>
+                        <button class="" style="width: 3em;">测试</button>
+                    </div>
+                </div>
+                <div id="editor" style="flex: 1;overflow: hidden;" spellcheck="false">
+                </div>
+                <div
+                    style="display: flex; height: 28px; line-height: 28px; text-align: center; position: relative; border-top: 1px solid var(--main_border_color); color: #4c4c4c; font-size: 0.9em;">
+                    <div
+                        style="flex: 1;margin: auto 7px; text-align: left;overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{current_data.name}}</div>
+                    <div id="counter"
+                        style="margin: auto 7px; text-align: left;overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 右键菜单-start -->
+        <div id="main_contextmenu" :style="style_contextmenu" class="chmST_contextmenu chmCL_contextmenu">
+            <div class="tool_group menu">
+                <div class="menu_item" @click="new_data()">新建</div>
+                <div class="menu_item" @click="delete_data()">删除</div>
+                <div class="menu_item" @click="rename()">重命名</div>
+                <div class="menu_item" @click="export_txt()">导出为txt</div>
+            </div>
+        </div>
+        <!-- 右键菜单-end -->
+
+        <div class="notification_container"></div>
+    </div>
+
+    <!-- highlight-start -->
+    <link href="./js/lib/highlight/styles/a11y-dark.min.css" rel="stylesheet">
+    <script src="./js/lib/highlight/highlight.min.js"></script>
+    <!-- highlight-end -->
+
+    <!-- quill-start -->
+    <link href="./css/font.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="./js/lib/quill-image-resize-module-master/image-resize.min.js"></script>
+    <script src="./js/lib/quill-image-drop-module-master/image-drop.min.js"></script>
+    <script src="./js/lib/quill-file-drop-module/src/FileDrop.js"></script>
+    <script src="./js/lib/quill-text-counter/TextCounter.js"></script>
+    <!-- quill-end -->
+
+    <script src="./js/lib/vue@2.6.12.js"></script>
+
+    <script src="./index.js"></script>
+</body>
+
+</html>
